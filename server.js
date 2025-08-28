@@ -1,101 +1,42 @@
 import express from "express";
 import fetch from "node-fetch";
 import Papa from "papaparse";
+import { v4 as uuidv4 } from "uuid";
 
 const app = express();
 app.use(express.json());
 
-// ✅ Enable CORS
-app.use((req, res, next) => {
-  res.setHeader("Access-Control-Allow-Origin", "*");
-  res.setHeader("Access-Control-Allow-Methods", "GET, POST, OPTIONS");
-  res.setHeader("Access-Control-Allow-Headers", "Content-Type, Authorization");
-  if (req.method === "OPTIONS") return res.sendStatus(200);
-  next();
-});
+// In-memory sessions: { sessionId: [ {role, content}, ... ] }
+const sessions = {};
 
-// 🔑 Replace with your Google Sheet CSV link
-const SHEET_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vSQf-vbNGAul4ozQZhYTLGB_AdQkVA0sn5PEjYp2Pw0Yfu-z-0TxHnemKKa1pw1e26YsYHshr9gGNTd/pub?output=csv";
-
-async function getLicenseeConfigs() {
-  try {
-    const res = await fetch(SHEET_URL);
-    const csvText = await res.text();
-    const parsed = Papa.parse(csvText, { header: true });
-    const rows = parsed.data;
-
-    const configs = {};
-    rows.forEach(row => {
-      if (row.licenseeId) {
-        configs[row.licenseeId] = {
-          branding: row.branding,
-          enrollLink: row.enrollLink,
-          bookingLink: row.bookingLink,
-          bubbleColor: row.bubbleColor || "#0077ff",
-          logoUrl: row.logoUrl || "",
-          welcomeMessage: row.welcomeMessage || `Hi 👋! I’m the Reset Guide for ${row.branding}.`,
-          fontSize: row.fontSize || "16px",
-          fontFamily: row.fontFamily || "Arial, sans-serif",
-          lineHeight: row.lineHeight || "1.6",
-          bubbleSize: row.bubbleSize || "60px",
-          cornerRadius: row.cornerRadius || "16px"
-        };
-      }
-    });
-
-    return configs;
-  } catch (err) {
-    console.error("⚠️ Error fetching Google Sheet:", err);
-    return {
-      "clinic123": {
-        branding: "Clinic 123",
-        enrollLink: "https://clinic123.com/enroll",
-        bookingLink: "https://clinic123.com/book",
-        bubbleColor: "#0077ff",
-        logoUrl: "",
-        welcomeMessage: "Hi 👋! I’m your Reset Guide. Are you here for stubborn weight, low energy, or pain?",
-        fontSize: "16px",
-        fontFamily: "Arial, sans-serif",
-        lineHeight: "1.6",
-        bubbleSize: "60px",
-        cornerRadius: "16px"
-      }
-    };
-  }
-}
-
+// GLOBAL PROMPT with stricter rules
 const GLOBAL_PROMPT = `
 You are the Reset Guide for the 21-Day Met Reset™ program.
-Your job is to:
-- Welcome visitors warmly
-- Ask clarifying questions
-- Educate them on the Reset program
-- Direct them to enroll (link provided) or book a call (link provided)
+
 Rules:
-- Stay positive and encouraging
-- Keep answers short, clear, and conversational
-- Always include disclaimer: "⚠️ This is not medical advice. For health concerns, consult a licensed provider."
+- Greet warmly only ONCE at the very beginning.
+- Do not repeat greetings if the user has already engaged.
+- Stay focused on answering their specific questions or guiding them forward.
+- If user says "yes" or confirms interest, move forward with next step instead of repeating.
+- Always include disclaimer at the end: "⚠️ This is not medical advice. For health concerns, consult a licensed provider."
 `;
 
+// Chat endpoint
 app.post("/api/chat", async (req, res) => {
-  const { message, licenseeId } = req.body;
-  console.log("📩 Incoming:", { message, licenseeId });
+  const { message, licenseeId, sessionId } = req.body;
 
   try {
-    const LICENSEE_CONFIGS = await getLicenseeConfigs();
-    const config = LICENSEE_CONFIGS[licenseeId] || LICENSEE_CONFIGS["clinic123"];
-
-    if (message === "__branding__") {
-      return res.json(config);
+    const sid = sessionId || uuidv4(); // generate new if not provided
+    if (!sessions[sid]) {
+      sessions[sid] = [
+        { role: "system", content: GLOBAL_PROMPT }
+      ];
     }
 
-    const systemPrompt = `
-      ${GLOBAL_PROMPT}
-      Clinic: ${config.branding}
-      Enrollment link: ${config.enrollLink}
-      Booking link: ${config.bookingLink}
-    `;
+    // Add user message
+    sessions[sid].push({ role: "user", content: message });
 
+    // Call OpenAI with full history
     const response = await fetch("https://api.openai.com/v1/chat/completions", {
       method: "POST",
       headers: {
@@ -104,18 +45,20 @@ app.post("/api/chat", async (req, res) => {
       },
       body: JSON.stringify({
         model: "gpt-4o-mini",
-        messages: [
-          { role: "system", content: systemPrompt },
-          { role: "user", content: message }
-        ],
-        max_tokens: 200
+        messages: sessions[sid],
+        max_tokens: 300
       })
     });
 
     const data = await response.json();
-    res.json({ reply: data.choices?.[0]?.message?.content || "⚠️ No reply" });
+    const reply = data.choices?.[0]?.message?.content || "⚠️ No reply";
+
+    // Add assistant reply to history
+    sessions[sid].push({ role: "assistant", content: reply });
+
+    res.json({ reply, sessionId: sid });
   } catch (err) {
-    console.error("❌ Server Error:", err);
+    console.error("❌ Chat error:", err);
     res.status(500).json({ error: "Server error", details: err.message });
   }
 });
