@@ -34,6 +34,7 @@
 
   let fallbackEnroll = null;
 
+  // Load branding and style settings
   async function loadBranding() {
     try {
       const res = await fetch(`${API_BASE}/api/chat`, {
@@ -60,7 +61,7 @@
         }
         if (data.enrollLink) fallbackEnroll = data.enrollLink;
 
-        // ✅ Apply style settings
+        // Apply style settings if present
         const style = document.createElement("style");
         style.innerHTML = `
           #reset-messages {
@@ -90,6 +91,11 @@
             cursor: pointer !important;
             font-family: ${data.fontFamily || "Arial, sans-serif"} !important;
           }
+          #reset-typing {
+            font-style: italic;
+            color: #666;
+            margin-bottom: 8px;
+          }
         `;
         document.head.appendChild(style);
       }
@@ -105,6 +111,19 @@
     if(!msg) return;
     messagesEl.innerHTML += `<div><b>You:</b> ${msg}</div>`;
     inputEl.value="";
+
+    // Show typing indicator
+    const typingDiv = document.createElement("div");
+    typingDiv.id = "reset-typing";
+    typingDiv.innerHTML = "<i>Reset Assistant is typing<span class='dots'>.</span></i>";
+    messagesEl.appendChild(typingDiv);
+
+    let dotCount = 1;
+    const dotInterval = setInterval(() => {
+      dotCount = (dotCount % 3) + 1;
+      typingDiv.querySelector(".dots").textContent = ".".repeat(dotCount);
+    }, 500);
+
     try {
       const response = await fetch(`${API_BASE}/api/chat`, {
         method:"POST",
@@ -113,10 +132,23 @@
       });
       if (!response.ok) throw new Error(`Server error: ${response.status}`);
       const data = await response.json();
+
+      clearInterval(dotInterval);
+      typingDiv.remove();
+
       if (!data.reply) throw new Error("No reply from API.");
-      messagesEl.innerHTML += `<div><b>Reset Assistant:</b> ${data.reply}</div>`;
-      messagesEl.scrollTop = messagesEl.scrollHeight;
+
+      // Append reply with its own scrollable block
+      const replyDiv = document.createElement("div");
+      replyDiv.innerHTML = `<b>Reset Assistant:</b> ${data.reply}`;
+      replyDiv.style.maxHeight = "150px";
+      replyDiv.style.overflowY = "auto";
+      replyDiv.scrollTop = 0;
+      messagesEl.appendChild(replyDiv);
+
     } catch (err) {
+      clearInterval(dotInterval);
+      typingDiv.remove();
       let fb = `<div style="color:red;"><b>⚠️ Connection issue.</b></div>`;
       if (fallbackEnroll) fb += `<div>👉 <a href="${fallbackEnroll}" target="_blank">Enroll here</a></div>`;
       messagesEl.innerHTML += fb;
