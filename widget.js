@@ -1,6 +1,7 @@
 (function(){
   const API_BASE = "https://reset-assistant.vercel.app";
   let sessionId = null;
+  let assistantName = "Assistant";
 
   const bubble = document.createElement("div");
   bubble.id = "reset-bubble";
@@ -31,28 +32,11 @@
   document.body.appendChild(windowEl);
 
   const closeBtn = windowEl.querySelector("#reset-close");
-
-  bubble.onclick = () => {
-    windowEl.classList.add("show");
-    windowEl.style.display = "flex";
-    if (window.innerWidth <= 768) {
-      closeBtn.style.display = "block";
-    }
-  };
-
-  closeBtn.onclick = () => {
-    windowEl.classList.remove("show");
-    setTimeout(() => {
-      windowEl.style.display = "none";
-    }, 400); // matches transition time
-  };
-
   const sendBtn = windowEl.querySelector("#reset-send");
   const clearBtn = windowEl.querySelector("#reset-clear");
   const inputEl = windowEl.querySelector("#reset-text");
   const messagesEl = windowEl.querySelector("#reset-messages");
 
-  let assistantName = "Assistant";
   const STORAGE_KEY = "reset-assistant-history";
 
   function loadHistory() {
@@ -99,12 +83,6 @@
         bottom: 0 !important;
       }
     }
-  `;
-  document.head.appendChild(style);
-
-  // Force bubble visibility override
-  const fixStyle = document.createElement("style");
-  fixStyle.innerHTML = `
     #reset-bubble {
       display: flex !important;
       align-items: center !important;
@@ -122,7 +100,49 @@
       cursor: pointer !important;
     }
   `;
-  document.head.appendChild(fixStyle);
+  document.head.appendChild(style);
+
+  bubble.onclick = () => {
+    windowEl.classList.add("show");
+    windowEl.style.display = "flex";
+    if (window.innerWidth <= 768) {
+      closeBtn.style.display = "block";
+    }
+  };
+
+  closeBtn.onclick = () => {
+    windowEl.classList.remove("show");
+    setTimeout(() => {
+      windowEl.style.display = "none";
+    }, 400);
+  };
+
+  async function loadBranding() {
+    try {
+      const res = await fetch(`${API_BASE}/api/branding?licenseeId=${window.LICENSEE_ID || "clinic123"}`);
+      const data = await res.json();
+
+      assistantName = data.assistantName || "Assistant";
+
+      // Update header + tooltip + input placeholder
+      document.getElementById("reset-header").innerText = `💬 Chat with ${assistantName} — Reset Guide`;
+      bubble.title = `Chat with ${assistantName}`;
+      inputEl.placeholder = `Ask ${assistantName} something...`;
+
+      // Apply branding styles
+      bubble.style.background = data.bubbleColor;
+      document.getElementById("reset-header").style.background = data.bubbleColor;
+      messagesEl.style.fontSize = data.fontSize;
+      messagesEl.style.fontFamily = data.fontFamily;
+      messagesEl.style.lineHeight = data.lineHeight;
+      windowEl.style.borderRadius = data.cornerRadius;
+
+      // Replace welcome message with licensee-specific one
+      messagesEl.innerHTML = `<div id="reset-welcome"><b>${assistantName}:</b> ${data.welcomeMessage}</div>`;
+    } catch (err) {
+      console.error("⚠️ Branding load error", err);
+    }
+  }
 
   async function sendMessage(){
     const msg = inputEl.value.trim();
@@ -185,5 +205,6 @@
   sendBtn.onclick = sendMessage;
   inputEl.addEventListener("keypress", e => { if(e.key==="Enter") sendMessage(); });
 
+  loadBranding();
   loadHistory();
 })();

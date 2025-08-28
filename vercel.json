@@ -7,6 +7,7 @@
   ],
   "routes": [
     { "src": "/api/chat", "dest": "server.js" },
+    { "src": "/api/branding", "dest": "server.js" },
     { "src": "/widget.js", "dest": "widget.js" },
     { "src": "/", "dest": "/index.html" }
   ]
