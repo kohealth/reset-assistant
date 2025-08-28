@@ -42,7 +42,7 @@
   const inputEl = windowEl.querySelector("#reset-text");
   const messagesEl = windowEl.querySelector("#reset-messages");
 
-  let fallbackEnroll = null; // store fallback link from branding
+  let fallbackEnroll = null;
 
   // ⚡ Load licensee branding (color + logo + welcomeMessage)
   async function loadBranding() {
@@ -55,24 +55,20 @@
       const data = await res.json();
 
       if (data.branding) {
-        // Bubble color
         if (data.bubbleColor) {
           bubble.style.background = data.bubbleColor;
           sendBtn.style.background = data.bubbleColor;
         }
-        // Logo image
         if (data.logoUrl) {
           bubble.innerText = "";
           bubble.style.backgroundImage = `url('${data.logoUrl}')`;
           bubble.style.backgroundSize = "cover";
           bubble.style.backgroundPosition = "center";
         }
-        // Welcome message
         if (data.welcomeMessage) {
           document.getElementById("reset-welcome").innerHTML =
             `<b>Reset Assistant:</b> ${data.welcomeMessage}`;
         }
-        // Save fallback enroll link
         if (data.enrollLink) {
           fallbackEnroll = data.enrollLink;
         }
