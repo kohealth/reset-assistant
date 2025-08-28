@@ -33,6 +33,7 @@
   const closeBtn = windowEl.querySelector("#reset-close");
 
   bubble.onclick = () => {
+    windowEl.classList.add("show");
     windowEl.style.display = "flex";
     if (window.innerWidth <= 768) {
       closeBtn.style.display = "block";
@@ -40,7 +41,10 @@
   };
 
   closeBtn.onclick = () => {
-    windowEl.style.display = "none";
+    windowEl.classList.remove("show");
+    setTimeout(() => {
+      windowEl.style.display = "none";
+    }, 400); // matches transition time
   };
 
   const sendBtn = windowEl.querySelector("#reset-send");
@@ -55,9 +59,15 @@
   function loadHistory() {
     const saved = localStorage.getItem(STORAGE_KEY);
     if (saved) {
-      const parsed = JSON.parse(saved);
-      sessionId = parsed.sessionId;
-      messagesEl.innerHTML = parsed.html;
+      try {
+        const parsed = JSON.parse(saved);
+        sessionId = parsed.sessionId || null;
+        messagesEl.innerHTML = parsed.html || "";
+      } catch (err) {
+        console.warn("⚠️ Corrupted chat history, resetting...");
+        localStorage.removeItem(STORAGE_KEY);
+        messagesEl.innerHTML = `<div id="reset-welcome"><b>${assistantName}:</b> Hi 👋! I’m your Reset Guide.</div>`;
+      }
     } else {
       messagesEl.innerHTML = `<div id="reset-welcome"><b>${assistantName}:</b> Hi 👋! I’m your Reset Guide.</div>`;
     }
@@ -74,16 +84,20 @@
     loadHistory();
   };
 
-  // Responsive styles
+  // Responsive styles + slide-up animation
   const style = document.createElement("style");
   style.innerHTML = `
     @media (max-width: 768px) {
       #reset-window {
         width: 100% !important;
         height: 100% !important;
-        bottom: 0 !important;
+        bottom: -100% !important;
         right: 0 !important;
         border-radius: 0 !important;
+        transition: bottom 0.4s ease-in-out;
+      }
+      #reset-window.show {
+        bottom: 0 !important;
       }
     }
   `;
