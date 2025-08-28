@@ -51,7 +51,6 @@
   const clearBtn = windowEl.querySelector("#reset-clear");
   const inputEl = windowEl.querySelector("#reset-text");
   const messagesEl = windowEl.querySelector("#reset-messages");
-  const headerEl = () => document.getElementById("reset-header");
 
   let assistantName = "Assistant";
   const STORAGE_KEY = "reset-assistant-history";
@@ -102,6 +101,28 @@
     }
   `;
   document.head.appendChild(style);
+
+  // Force bubble visibility override
+  const fixStyle = document.createElement("style");
+  fixStyle.innerHTML = `
+    #reset-bubble {
+      display: flex !important;
+      align-items: center !important;
+      justify-content: center !important;
+      position: fixed !important;
+      bottom: 20px !important;
+      right: 20px !important;
+      width: 60px !important;
+      height: 60px !important;
+      border-radius: 50% !important;
+      background: #0077ff !important;
+      color: white !important;
+      font-size: 28px !important;
+      z-index: 2147483647 !important;
+      cursor: pointer !important;
+    }
+  `;
+  document.head.appendChild(fixStyle);
 
   async function sendMessage(){
     const msg = inputEl.value.trim();
