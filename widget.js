@@ -1,4 +1,6 @@
 (function(){
+  const API_BASE = "https://reset-assistant.vercel.app";
+
   const bubble = document.createElement("div");
   bubble.id = "reset-bubble";
   bubble.style = `
@@ -40,10 +42,12 @@
   const inputEl = windowEl.querySelector("#reset-text");
   const messagesEl = windowEl.querySelector("#reset-messages");
 
+  let fallbackEnroll = null; // store fallback link from branding
+
   // ⚡ Load licensee branding (color + logo + welcomeMessage)
   async function loadBranding() {
     try {
-      const res = await fetch("/api/chat", {
+      const res = await fetch(`${API_BASE}/api/chat`, {
         method:"POST",
         headers:{"Content-Type":"application/json"},
         body:JSON.stringify({message:"__branding__", licenseeId:window.LICENSEE_ID || "clinic123"})
@@ -68,6 +72,10 @@
           document.getElementById("reset-welcome").innerHTML =
             `<b>Reset Assistant:</b> ${data.welcomeMessage}`;
         }
+        // Save fallback enroll link
+        if (data.enrollLink) {
+          fallbackEnroll = data.enrollLink;
+        }
       }
     } catch (err) {
       console.error("⚠️ Branding load error", err);
@@ -83,7 +91,7 @@
     inputEl.value="";
 
     try {
-      const response = await fetch("/api/chat", {
+      const response = await fetch(`${API_BASE}/api/chat`, {
         method:"POST",
         headers:{"Content-Type":"application/json"},
         body:JSON.stringify({message:msg, licenseeId:window.LICENSEE_ID || "clinic123"})
@@ -104,7 +112,11 @@
 
     } catch (err) {
       console.error("❌ Chat Error:", err);
-      messagesEl.innerHTML += `<div style="color:red;"><b>Error:</b> ${err.message}</div>`;
+      let fallbackMsg = `<div style="color:red;"><b>⚠️ I’m having trouble connecting right now.</b></div>`;
+      if (fallbackEnroll) {
+        fallbackMsg += `<div>👉 <a href="${fallbackEnroll}" target="_blank">Click here to enroll in the Reset Program</a></div>`;
+      }
+      messagesEl.innerHTML += fallbackMsg;
     }
   }
 
