@@ -4,7 +4,6 @@ import fetch from "node-fetch";
 const app = express();
 app.use(express.json());
 
-// Example licensee configs (add more here)
 const LICENSEE_CONFIGS = {
   "clinic123": {
     enrollLink: "https://clinic123.com/enroll",
@@ -18,7 +17,6 @@ const LICENSEE_CONFIGS = {
   }
 };
 
-// Chat endpoint
 app.post("/api/chat", async (req, res) => {
   const { message, licenseeId } = req.body;
   const config = LICENSEE_CONFIGS[licenseeId] || LICENSEE_CONFIGS["clinic123"];
