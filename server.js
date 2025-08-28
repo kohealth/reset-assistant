@@ -17,7 +17,7 @@ app.use((req, res, next) => {
 });
 
 // 🔑 Replace with your published Google Sheet CSV link
-const SHEET_URL = "https://docs.google.com/spreadsheets/d/e/<LONG_ID>/pub?output=csv";
+const SHEET_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vR1-GMSgxr7k3oFH3E-u8tYOLQCtmIW3aZ4Eve1OP45FXoTFlPv__CxNzwa_3kqmrx7RYENCaTCqxzf/pub?output=csv";
 
 // Fetch licensee configs from Google Sheets
 async function getLicenseeConfigs() {
