@@ -10,16 +10,17 @@
   windowEl.id = "reset-window";
   windowEl.style = `
     position: fixed; bottom: 90px; right: 20px;
-    width: 320px; height: 400px; background: white;
+    width: 320px; height: 420px; background: white;
     display:none; flex-direction:column; overflow:hidden; z-index:9999;
   `;
   windowEl.innerHTML = `
-    <div id="reset-messages" style="flex:1;padding:10px;overflow-y:auto;">
-      <div id="reset-welcome"><b>Reset Assistant:</b> Hi 👋! I’m your Reset Guide.</div>
-    </div>
+    <div id="reset-messages" style="flex:1;padding:10px;overflow-y:auto;"></div>
     <div style="display:flex;border-top:1px solid #ccc;">
       <input id="reset-text" style="flex:1;border:none;padding:10px;" placeholder="Type here..."/>
       <button id="reset-send" style="background:#0077ff;color:white;border:none;padding:10px;">Send</button>
+    </div>
+    <div style="border-top:1px solid #ccc;padding:5px;text-align:center;">
+      <button id="reset-clear" style="background:#eee;border:none;padding:5px 10px;cursor:pointer;font-size:12px;">🗑️ Start New Chat</button>
     </div>
   `;
   document.body.appendChild(windowEl);
@@ -29,10 +30,34 @@
   };
 
   const sendBtn = windowEl.querySelector("#reset-send");
+  const clearBtn = windowEl.querySelector("#reset-clear");
   const inputEl = windowEl.querySelector("#reset-text");
   const messagesEl = windowEl.querySelector("#reset-messages");
 
   let fallbackEnroll = null;
+  const STORAGE_KEY = "reset-assistant-history";
+
+  // Load chat history from localStorage
+  function loadHistory() {
+    const saved = localStorage.getItem(STORAGE_KEY);
+    if (saved) {
+      messagesEl.innerHTML = saved;
+    } else {
+      messagesEl.innerHTML = `<div id="reset-welcome"><b>Reset Assistant:</b> Hi 👋! I’m your Reset Guide.</div>`;
+    }
+    messagesEl.scrollTop = messagesEl.scrollHeight;
+  }
+
+  // Save chat history to localStorage
+  function saveHistory() {
+    localStorage.setItem(STORAGE_KEY, messagesEl.innerHTML);
+  }
+
+  // Clear chat history
+  clearBtn.onclick = () => {
+    localStorage.removeItem(STORAGE_KEY);
+    loadHistory();
+  };
 
   // Load branding and style settings
   async function loadBranding() {
@@ -55,7 +80,7 @@
           bubble.style.backgroundSize = "cover";
           bubble.style.backgroundPosition = "center";
         }
-        if (data.welcomeMessage) {
+        if (data.welcomeMessage && !localStorage.getItem(STORAGE_KEY)) {
           document.getElementById("reset-welcome").innerHTML =
             `<b>Reset Assistant:</b> ${data.welcomeMessage}`;
         }
@@ -87,7 +112,7 @@
             font-size: 14px !important;
             font-family: ${data.fontFamily || "Arial, sans-serif"} !important;
           }
-          #reset-send {
+          #reset-send, #reset-clear {
             cursor: pointer !important;
             font-family: ${data.fontFamily || "Arial, sans-serif"} !important;
           }
@@ -104,6 +129,7 @@
     }
   }
 
+  loadHistory();
   loadBranding();
 
   async function sendMessage(){
@@ -111,12 +137,15 @@
     if(!msg) return;
     messagesEl.innerHTML += `<div><b>You:</b> ${msg}</div>`;
     inputEl.value="";
+    messagesEl.scrollTop = messagesEl.scrollHeight;
+    saveHistory();
 
     // Show typing indicator
     const typingDiv = document.createElement("div");
     typingDiv.id = "reset-typing";
     typingDiv.innerHTML = "<i>Reset Assistant is typing<span class='dots'>.</span></i>";
     messagesEl.appendChild(typingDiv);
+    messagesEl.scrollTop = messagesEl.scrollHeight;
 
     let dotCount = 1;
     const dotInterval = setInterval(() => {
@@ -138,13 +167,9 @@
 
       if (!data.reply) throw new Error("No reply from API.");
 
-      // Append reply with its own scrollable block
-      const replyDiv = document.createElement("div");
-      replyDiv.innerHTML = `<b>Reset Assistant:</b> ${data.reply}`;
-      replyDiv.style.maxHeight = "150px";
-      replyDiv.style.overflowY = "auto";
-      replyDiv.scrollTop = 0;
-      messagesEl.appendChild(replyDiv);
+      messagesEl.innerHTML += `<div><b>Reset Assistant:</b> ${data.reply}</div>`;
+      messagesEl.scrollTop = messagesEl.scrollHeight;
+      saveHistory();
 
     } catch (err) {
       clearInterval(dotInterval);
@@ -152,6 +177,8 @@
       let fb = `<div style="color:red;"><b>⚠️ Connection issue.</b></div>`;
       if (fallbackEnroll) fb += `<div>👉 <a href="${fallbackEnroll}" target="_blank">Enroll here</a></div>`;
       messagesEl.innerHTML += fb;
+      messagesEl.scrollTop = messagesEl.scrollHeight;
+      saveHistory();
     }
   }
 
