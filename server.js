@@ -6,7 +6,7 @@ const app = express();
 app.use(express.json());
 
 // 🔑 Replace this with your published Google Sheet CSV link
-const SHEET_URL = "https://docs.google.com/spreadsheets/d/e/<LONG_ID>/pub?output=csv";
+const SHEET_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vSRRkfHNvHuY3X3GnRCwEZB8d_eDBfdhDctPTM1tzNAYbHy9MzYmTGx2cRx1j1H8w/pub?output=csv";
 
 // Function to fetch and parse Google Sheet
 async function getLicenseeConfigs() {
