@@ -45,14 +45,30 @@
     messagesEl.innerHTML += `<div><b>You:</b> ${msg}</div>`;
     inputEl.value="";
 
-    const response = await fetch("/api/chat", {
-      method:"POST",
-      headers:{"Content-Type":"application/json"},
-      body:JSON.stringify({message:msg, licenseeId:window.LICENSEE_ID || "clinic123"})
-    });
-    const data = await response.json();
-    messagesEl.innerHTML += `<div><b>Reset Assistant:</b> ${data.reply}</div>`;
-    messagesEl.scrollTop = messagesEl.scrollHeight;
+    try {
+      const response = await fetch("/api/chat", {
+        method:"POST",
+        headers:{"Content-Type":"application/json"},
+        body:JSON.stringify({message:msg, licenseeId:window.LICENSEE_ID || "clinic123"})
+      });
+
+      if (!response.ok) {
+        throw new Error(`Server error: ${response.status} ${response.statusText}`);
+      }
+
+      const data = await response.json();
+
+      if (!data.reply) {
+        throw new Error("No reply from API. Check server logs or OpenAI key.");
+      }
+
+      messagesEl.innerHTML += `<div><b>Reset Assistant:</b> ${data.reply}</div>`;
+      messagesEl.scrollTop = messagesEl.scrollHeight;
+
+    } catch (err) {
+      console.error("❌ Chat Error:", err);
+      messagesEl.innerHTML += `<div style="color:red;"><b>Error:</b> ${err.message}</div>`;
+    }
   }
 
   sendBtn.onclick = sendMessage;
