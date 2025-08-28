@@ -18,7 +18,7 @@ app.use((req, res, next) => {
 });
 
 // 🔗 Published Google Sheet (must end in ?output=csv)
-const SHEET_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vRh4WQtnznsHb4P-ETKnnFceDuenY2nJ-2IsvDepmX3v8u7p2uBj9zxea1elNx5ncGXwfLuql3gfvVG/pub?output=csv";
+const SHEET_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vS445uK-ZqnI6iO_S5V7xi6d-cDs-ASC-RibvPGcen5eYZBPgw9Vfd1nLkMIL6lTQ/pub?output=csv";
 
 // In-memory sessions: { sessionId: [ {role, content}, ... ] }
 const sessions = {};
