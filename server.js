@@ -1,25 +1,22 @@
 import express from "express";
 import fetch from "node-fetch";
-import Papa from "papaparse"; // parse CSV from Google Sheets
+import Papa from "papaparse";
 
 const app = express();
 app.use(express.json());
 
-// ✅ Enable CORS for all licensee sites
+// ✅ Enable CORS
 app.use((req, res, next) => {
   res.setHeader("Access-Control-Allow-Origin", "*");
   res.setHeader("Access-Control-Allow-Methods", "GET, POST, OPTIONS");
   res.setHeader("Access-Control-Allow-Headers", "Content-Type, Authorization");
-  if (req.method === "OPTIONS") {
-    return res.sendStatus(200); // preflight success
-  }
+  if (req.method === "OPTIONS") return res.sendStatus(200);
   next();
 });
 
-// 🔑 Replace with your published Google Sheet CSV link
-const SHEET_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vSQf-vbNGAul4ozQZhYTLGB_AdQkVA0sn5PEjYp2Pw0Yfu-z-0TxHnemKKa1pw1e26YsYHshr9gGNTd/pub?output=csv";
+// 🔑 Replace with your Google Sheet CSV link
+const SHEET_URL = "https://docs.google.com/spreadsheets/d/e/<LONG_ID>/pub?output=csv";
 
-// Fetch licensee configs from Google Sheets
 async function getLicenseeConfigs() {
   try {
     const res = await fetch(SHEET_URL);
@@ -36,7 +33,12 @@ async function getLicenseeConfigs() {
           bookingLink: row.bookingLink,
           bubbleColor: row.bubbleColor || "#0077ff",
           logoUrl: row.logoUrl || "",
-          welcomeMessage: row.welcomeMessage || `Hi 👋! I’m the Reset Guide for ${row.branding}.`
+          welcomeMessage: row.welcomeMessage || `Hi 👋! I’m the Reset Guide for ${row.branding}.`,
+          fontSize: row.fontSize || "16px",
+          fontFamily: row.fontFamily || "Arial, sans-serif",
+          lineHeight: row.lineHeight || "1.6",
+          bubbleSize: row.bubbleSize || "60px",
+          cornerRadius: row.cornerRadius || "16px"
         };
       }
     });
@@ -44,7 +46,6 @@ async function getLicenseeConfigs() {
     return configs;
   } catch (err) {
     console.error("⚠️ Error fetching Google Sheet:", err);
-    // fallback default config
     return {
       "clinic123": {
         branding: "Clinic 123",
@@ -52,13 +53,17 @@ async function getLicenseeConfigs() {
         bookingLink: "https://clinic123.com/book",
         bubbleColor: "#0077ff",
         logoUrl: "",
-        welcomeMessage: "Hi 👋! I’m your Reset Guide. Are you here for stubborn weight, low energy, or pain?"
+        welcomeMessage: "Hi 👋! I’m your Reset Guide. Are you here for stubborn weight, low energy, or pain?",
+        fontSize: "16px",
+        fontFamily: "Arial, sans-serif",
+        lineHeight: "1.6",
+        bubbleSize: "60px",
+        cornerRadius: "16px"
       }
     };
   }
 }
 
-// Global sales prompt
 const GLOBAL_PROMPT = `
 You are the Reset Guide for the 21-Day Met Reset™ program.
 Your job is to:
@@ -72,7 +77,6 @@ Rules:
 - Always include disclaimer: "⚠️ This is not medical advice. For health concerns, consult a licensed provider."
 `;
 
-// API route
 app.post("/api/chat", async (req, res) => {
   const { message, licenseeId } = req.body;
   console.log("📩 Incoming:", { message, licenseeId });
@@ -81,7 +85,6 @@ app.post("/api/chat", async (req, res) => {
     const LICENSEE_CONFIGS = await getLicenseeConfigs();
     const config = LICENSEE_CONFIGS[licenseeId] || LICENSEE_CONFIGS["clinic123"];
 
-    // Special branding fetch for widget.js
     if (message === "__branding__") {
       return res.json(config);
     }
@@ -110,8 +113,6 @@ app.post("/api/chat", async (req, res) => {
     });
 
     const data = await response.json();
-    console.log("✅ OpenAI Response:", data);
-
     res.json({ reply: data.choices?.[0]?.message?.content || "⚠️ No reply" });
   } catch (err) {
     console.error("❌ Server Error:", err);
